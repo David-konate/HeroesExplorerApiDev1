@@ -12,6 +12,7 @@ use App\Models\HeroSkill;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Redirect;
 
 class HeroController extends Controller
 {
@@ -23,47 +24,12 @@ class HeroController extends Controller
     public function index(Request $request)
     {
 
-        // Récupérez les paramètres du filtre depuis l'URL
-        $filterRaceId = $request->input('race_id');
-        $filterCreatorId = $request->input('creator_id');
-        $filterCategoryId = $request->input('category_id');
-
-
-        // Construisez la requête en fonction des filtres
-        $query = $request->input('q');
-
-        $heroes = Hero::when(isset($query), function ($queryBuilder) use ($query) {
-            $queryBuilder->where('pseudo', 'like', '%' . $query . '%')
-                ->orWhere('last_name', 'like', '%' . $query . '%')
-                ->orWhere('first_name', 'like', '%' . $query . '%');
-        })
-            // Ajoutez cette ligne pour trier par ordre alphabétique du pseudo
-            ->orderBy('pseudo')
-            ->get();
-
-
         // Récupérez l'utilisateur en cours
-        $user = Auth::user();
-
-        // Passez les créateurs, les races, l'utilisateur et les héros à la vue
-        return view('heroes.index', compact('heroes', 'user'));
-    }
-
-
-
-
-
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
-    {
-        $creators = Creator::all();
-        $categories = Category::all();
-        $alignments = Alignment::all();
-        $races = Race::all();
-        $skills = Skill::all();
-        return view('heroes.create', compact('creators', 'categories', 'alignments', 'races', 'skills'));
+        // $user = Auth::user();
+        $heroes = Hero::with(['creator'])->get();
+        // Passez l'utilisateur et les héros à la vue
+        // return view('heroes.index', compact('heroes', 'user'));
+        return response()->json($heroes);
     }
 
     /**
@@ -74,17 +40,6 @@ class HeroController extends Controller
 
         $request->validate([
             'pseudo' => 'required|string',
-            'skill_ids' => [
-
-                'array',
-                'min:1',
-                'max:3',
-                function ($attribute, $value, $fail) {
-                    if (count($value) > 3) {
-                        $fail('Vous ne pouvez sélectionner que 3 compétences au maximum.');
-                    }
-                },
-            ],
         ]);
 
         $filename = "";
@@ -103,26 +58,16 @@ class HeroController extends Controller
             $filename = Null;
         }
 
-        $hero = Hero::create([
-            'user_id' => Auth::id(),
-            'pseudo' => $request->pseudo,
-            'first_name' => $request->first_name,
-            'last_name' => $request->last_name,
-            'first_appearance' => $request->first_appearance,
-            'history' => $request->history,
-            'image_url' => $filename,
-            'identite_connue' => $request->has('identite_connue'),
-            'creator_id' => $request->creator_id,
-            'race_id' => $request->race_id,
-            'category_id' => $request->category_id,
-            'alignment_id' => $request->alignment_id,
-            'image' => $filename,
-        ]);
+        $hero = Hero::create(array_merge($request->all(), ['image_url' => $filename]));
 
         // Gestion des compétences associées au héros
         $hero->skills()->attach($request->input('skill_ids', []));
-        return redirect()->route('heroes.index')
-            ->with('success', 'Héros ajouté avec succès !');
+
+
+        return response()->json([
+            'status' => 'Success',
+            'data' => $hero,
+        ]);
     }
 
     /**
@@ -131,46 +76,22 @@ class HeroController extends Controller
     public function show(string $id)
     {
         $hero = Hero::findOrFail($id);
-        // $skills = $hero->skills;
 
-        // return view('heroes.show', ['url' => url('heroes/' . $hero->pseudo), 'hero' => $hero, 'skills' => $skills]);
-
-        $hero = Hero::where('pseudo', $hero->pseudo)->firstOrFail();
-        $url = url('/heroes/' . $hero->pseudo);
-
-        // Utilisez la méthode redirect() pour rediriger vers l'URL générée
-        // return redirect($url)->with(['hero' => $hero, 'skills' => $hero->skills]);
-        return view('heroes.show', ['url' => $url, 'hero' => $hero, 'skills' => $hero->skills]);
+        return response()->json([
+            'hero' => $hero,
+            'skills' => $hero->skills,
+        ]);
     }
 
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(string $id)
-    {
-        $hero = Hero::findOrFail($id);
-        $categories = Category::orderBy('name', 'asc')->get();
-        $creators = Creator::orderBy('last_name', 'asc')->orderBy('first_name', 'asc')->get();
-        $alignments = Alignment::orderBy('name', 'asc')->get();
-        $races = Race::orderBy('name', 'asc')->get();
-        $skills = Skill::orderBy('name', 'asc')->get();
 
-
-        return view('heroes.edit', compact(['hero', 'skills', 'categories', 'creators', 'alignments', 'races']));
-    }
-
-    /**
-     * Update the specified resource in storage., '
-     */
-    public function update(Request $request, $id)
+    public function update(Request $request, Hero $hero)
     {
         $request->validate([
             'skill_ids' => [
                 'array',
                 'min:0',
                 'max:3',
-                function ($attribute, $value, $fail) use ($id) {
-                    $hero = Hero::find($id);
+                function ($attribute, $value, $fail) use ($hero) {
                     if ($hero && count($value) > 3) {
                         $fail('Vous ne pouvez sélectionner que 3 compétences au maximum.');
                     }
@@ -178,16 +99,13 @@ class HeroController extends Controller
             ],
         ]);
 
-        $hero = Hero::find($id);
-
         if (!$hero) {
-            return redirect()->route('heros.index')->with('error', 'hero non trouvé');
+            return Redirect::route('heroes')->with('error', 'Hero non trouvé');
         }
 
         if (count($request->input('skill_ids', [])) > 3) {
-            return redirect()->back()->withInput()->with('error', 'Vous ne pouvez sélectionner que 3 compétences au maximum.');
+            return Redirect::back()->withInput()->with('error', 'Vous ne pouvez sélectionner que 3 compétences au maximum.');
         }
-
 
         // Vérifiez si un nouveau fichier image est téléchargé
         if ($request->hasFile('image')) {
@@ -197,11 +115,9 @@ class HeroController extends Controller
             $filename = $filenameWithExt . '_' . time() . '.' . $extension;
             $request->file('image')->storeAs('public/uploads', $filename);
 
-            // id a la place du nom de la phot dorigine
-
             // Supprimez l'ancien fichier image s'il existe
-            if ($hero->image && Storage::exists('public/uploads/' . $hero->image)) {
-                Storage::delete('public/uploads/' . $hero->image);
+            if ($hero->image_url && Storage::exists('public/uploads/' . $hero->image_url)) {
+                Storage::delete('public/uploads/' . $hero->image_url);
             }
 
             $hero->image_url = $filename;
@@ -225,10 +141,12 @@ class HeroController extends Controller
             $request->secondary_skill_id,
             $request->tertiary_skill_id,
         ]);
+
         $hero->save();
 
-        return redirect()->route('heroes.index')->with('success', 'Le hero a été mis à jour avec succès !');
+        return Redirect::route('heroes.index')->with('success', 'Le héros a été mis à jour avec succès !');
     }
+
 
 
     /**
@@ -239,40 +157,42 @@ class HeroController extends Controller
         HeroSkill::where('hero_id', $id)->delete();
 
         $hero = Hero::findOrFail($id);
+
         $hero->delete();
-        return redirect('/heroes')->with('success', 'Héro supprimé avec succès');
-    }
 
-    public function resetSkills($id)
-    {
-        $hero = Hero::find($id);
-
-        if (!$hero) {
-            return redirect()->route('heroes.index')->with('error', 'Hero not found');
-        }
-
-        // Détachez toutes les compétences associées au héros
-        $hero->skills()->detach();
-
-        return redirect()->route('heroes.edit', $hero->id)->with('success', 'Compétences réinitialisées avec succès');
-    }
-
-    public function updateSkills(Request $request, $id)
-    {
-
-        $request->validate([
-
+        return response()->json([
+            'status' => 'success', 'Héro supprimé avec succès'
         ]);
-
-        $hero = Hero::find($id);
-
-        if (!$hero) {
-            return redirect()->route('heroes.index')->with('error', 'Hero not found');
-        }
-
-        // Mettez à jour les compétences du héros
-        $hero->skills()->sync($request->input('skill_ids', []));
-
-        return redirect()->route('heroes.index')->with('success', 'Compétences mises à jour avec succès !');
     }
+
+    // public function resetSkills($id)
+    // {
+    //     $hero = Hero::find($id);
+
+    //     if (!$hero) {
+    //         return redirect()->route('heroes.index')->with('error', 'Hero not found');
+    //     }
+
+    //     // Détachez toutes les compétences associées au héros
+    //     $hero->skills()->detach();
+
+    //     return redirect()->route('heroes.edit', $hero->id)->with('success', 'Compétences réinitialisées avec succès');
+    // }
+
+    // public function updateSkills(Request $request, $id)
+    // {
+
+    //     $request->validate([]);
+
+    //     $hero = Hero::find($id);
+
+    //     if (!$hero) {
+    //         return redirect()->route('heroes.index')->with('error', 'Hero not found');
+    //     }
+
+    //     // Mettez à jour les compétences du héros
+    //     $hero->skills()->sync($request->input('skill_ids', []));
+
+    //     return redirect()->route('heroes.index')->with('success', 'Compétences mises à jour avec succès !');
+    // }
 }
