@@ -33,6 +33,13 @@ class HeroController extends Controller
     }
 
     /**
+     * Show the form for creating a new resource.
+     */
+    public function create()
+    {
+    }
+
+    /**
      * Store a newly created resource in storage.
      */
     public function store(Request $request)
@@ -144,7 +151,10 @@ class HeroController extends Controller
 
         $hero->save();
 
-        return Redirect::route('heroes.index')->with('success', 'Le héros a été mis à jour avec succès !');
+        return response()->json([
+            'status' => 'Le héros a été mis à jour avec succès !',
+            'data' => $hero,
+        ]);
     }
 
 
@@ -161,7 +171,7 @@ class HeroController extends Controller
         $hero->delete();
 
         return response()->json([
-            'status' => 'success', 'Héro supprimé avec succès'
+            'status' => 'success, Héro supprimé avec succès'
         ]);
     }
 

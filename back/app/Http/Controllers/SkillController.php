@@ -6,7 +6,6 @@ use App\Models\User;
 use App\Models\Skill;
 use App\Models\HeroSkill;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 
 class SkillController extends Controller
 {
@@ -15,19 +14,13 @@ class SkillController extends Controller
      */
     public function index(Request $request)
     {
-        $skills = Skill::orderBy('name', 'asc')->get();
+        $skills = Skill::all();
 
         // Construisez la requête en fonction des filtres
-        $query = $request->input('q');
-
-        $skills = Skill::when(isset($query), function ($queryBuilder) use ($query) {
-            $queryBuilder->where('name', 'like', '%' . $query . '%');
-        })->get();
-
-        $user = Auth::user();
 
 
-        return view('skills.index', compact('skills', 'user'));
+
+        return response()->json(['data' => $skills]);
     }
 
     /**
@@ -35,7 +28,6 @@ class SkillController extends Controller
      */
     public function create()
     {
-        return view('skills.create');
     }
 
     /**
@@ -48,12 +40,12 @@ class SkillController extends Controller
             'name' => 'required',
         ]);
 
-        Skill::create([
-            'name' => $request->name
-        ]);
+        $skills = Skill::create(array_merge($request->all(),));
 
-        return redirect()->route('skills.index')
-            ->with('success', 'Skill ajouté avec succès !');
+        return response()->json([
+            'status' => 'Skill ajouté avec succès !',
+            'data' => $skills
+        ]);
     }
 
     /**
@@ -63,8 +55,7 @@ class SkillController extends Controller
     {
         $skill = Skill::find($id);
 
-        return view('skill.show', ['url' => url('skills/' . $skill->name), 'skill' => $skill]);
-
+        return response()->json(['data' => $skill]);
     }
 
     /**
@@ -72,9 +63,6 @@ class SkillController extends Controller
      */
     public function edit(string $id)
     {
-        $skill = Skill::findOrFail($id);
-
-        return view('skills.edit', compact('skill'));
     }
 
     /**
@@ -90,7 +78,10 @@ class SkillController extends Controller
         $skill->name = $request->name;
         $skill->save();
 
-        return redirect()->route('skills.index')->with('success', 'Le pouvoir a été mis à jour avec succès !');
+        return response()->json([
+            'status' => 'Le pouvoir a été mis à jour avec succès !',
+            'data' => $skill,
+        ]);
     }
 
     /**
@@ -101,7 +92,9 @@ class SkillController extends Controller
         HeroSkill::where('skill_id', $id)->delete();
 
         $skill = Skill::findOrFail($id);
+
         $skill->delete();
-        return redirect('/skills')->with('success', 'Skill supprimé avec succès');
+
+        return response()->json(['status' => 'success, Créateur supprimé avec succès']);
     }
 }

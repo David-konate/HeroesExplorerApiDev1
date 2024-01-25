@@ -15,21 +15,9 @@ class CreatorController extends Controller
     public function index(Request $request)
     {
 
-        // Construisez la requête en fonction des filtres
-        $query = $request->input('q');
+        $creators = Creator::all();
 
-        $creators = Creator::when(isset($query), function ($queryBuilder) use ($query) {
-            $queryBuilder->where('pseudo', 'like', '%' . $query . '%')
-                ->orWhere('last_name', 'like', '%' . $query . '%')
-                ->orWhere('first_name', 'like', '%' . $query . '%');
-        })
-        // Ajoutez cette ligne pour trier par ordre alphabétique du pseudo
-        ->orderBy('last_name')
-        ->get();
-
-        $user = Auth::user();
-
-        return view('creators.index', compact('creators', 'user'));
+        return response()->json(['data' => $creators]);
     }
 
     /**
@@ -37,7 +25,7 @@ class CreatorController extends Controller
      */
     public function create()
     {
-        return view('creators.create');
+        //
     }
 
     /**
@@ -48,8 +36,6 @@ class CreatorController extends Controller
         $request->validate([
             'first_name' => 'required|string',
             'last_name' => 'required|string',
-
-
         ]);
 
         Creator::create([
@@ -62,8 +48,12 @@ class CreatorController extends Controller
 
         // dd($request);
 
-        return redirect()->route('creators.index')
-            ->with('success', 'Créateur ajouté avec succès !');
+        $creator = Creator::create(array_merge($request->all(),));
+
+        return response()->json([
+            'status' => 'Succes',
+            'data' => $creator,
+        ]);
     }
 
     /**
@@ -72,7 +62,7 @@ class CreatorController extends Controller
     public function show(string $id)
     {
         $creator = Creator::findOrFail($id);
-        return view('creators.show', compact('creator'));
+        return response()->json(['data' => $creator]);
     }
 
     /**
@@ -80,9 +70,6 @@ class CreatorController extends Controller
      */
     public function edit(string $id)
     {
-        $creator = Creator::findOrFail($id);
-
-        return view('creators.edit', compact(['creator']));
     }
 
     /**
@@ -90,10 +77,7 @@ class CreatorController extends Controller
      */
     public function update(Request $request, string $id)
     {
-        $request->validate([
-
-
-        ]);
+        $request->validate([]);
 
         $creator = Creator::find($id);
         if ($request->hasFile('image')) {
@@ -126,7 +110,10 @@ class CreatorController extends Controller
 
         $creator->save();
 
-        return redirect()->route('creators.index')->with('success', 'L\'auteur a été mis à jour avec succès !');
+        return response()->json([
+            'status' => 'Le créateur a été mis à jour avec succès !',
+            'data' => $creator,
+        ]);
     }
 
 
@@ -137,9 +124,9 @@ class CreatorController extends Controller
     public function destroy(string $id)
     {
         $creator = Creator::findOrFail($id);
+
         $creator->delete();
-        return redirect('/creators')->with('success', 'Auteur supprimé avec succès');
+
+        return response()->json(['status' => 'success, Créateur supprimé avec succès']);
     }
-
-
 }

@@ -15,7 +15,9 @@ class UserController extends Controller
      */
     public function index()
     {
-        //
+        $users = User::all();
+
+        return response()->json(['data' => $users]);
     }
 
     /**
@@ -39,7 +41,9 @@ class UserController extends Controller
      */
     public function show(string $id)
     {
-        //
+        $user = User::find($id);
+
+        return response()->json(['data' => $user]);
     }
 
     /**
@@ -47,9 +51,6 @@ class UserController extends Controller
      */
     public function edit(User $user)
     {
-        $heroes = Hero::orderBy('pseudo', 'asc')->get();
-
-        return view('user/edit', compact('heroes', 'user'));
     }
 
     /**
@@ -89,7 +90,10 @@ class UserController extends Controller
         $user->save();
 
         //on redirige sur la page precedente
-        return redirect()->route('heroes.index',)->with('message', 'Le compte a bien été modifié');
+        return response()->json([
+            'status' => 'Le compte a été mis à jour avec succès !',
+            'data' => $user,
+        ]);
     }
 
     /**
@@ -103,6 +107,5 @@ class UserController extends Controller
         } else {
             return redirect()->back()->withErrors(['erreur' => 'suppression du héro']);
         }
-
     }
 }

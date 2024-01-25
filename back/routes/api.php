@@ -1,8 +1,12 @@
 <?php
 
+use App\Http\Controllers\CreatorController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\HeroController;
+use App\Http\Controllers\RaceController;
+use App\Http\Controllers\SkillController;
+use App\Http\Controllers\UserController;
 
 /*
 |--------------------------------------------------------------------------
@@ -20,3 +24,7 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 });
 
 Route::apiResource("heroes", HeroController::class);
+Route::apiResource("creators", CreatorController::class);
+Route::apiResource("races", RaceController::class);
+Route::apiResource("skills", SkillController::class);
+Route::apiResource("users", UserController::class);

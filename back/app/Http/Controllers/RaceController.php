@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Models\Race;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 
 class RaceController extends Controller
 {
@@ -13,17 +12,9 @@ class RaceController extends Controller
      */
     public function index(Request $request)
     {
-        $query = $request->input('q');
+        $races = Race::all();
 
-        $races = Race::when(isset($query), function ($queryBuilder) use ($query) {
-            $queryBuilder->where('name', 'like', '%' . $query . '%');
-        })
-        ->orderBy('name')
-        ->get();
-
-        $user = Auth::user();
-
-        return view('races.index', compact('races', 'user'));
+        return response()->json(['data' => $races]);
     }
 
     /**
@@ -31,7 +22,6 @@ class RaceController extends Controller
      */
     public function create()
     {
-        return view('races.create');
     }
 
     /**
@@ -47,8 +37,12 @@ class RaceController extends Controller
             'name' => $request->name,
         ]);
 
-        return redirect()->route('races.index')
-            ->with('success', 'Nouvelle race ajouté avec succès !');
+        $race = Race::create(array_merge($request->all(),));
+
+        return response()->json([
+            'status' => 'Nouvelle race ajouté avec succès !',
+            'data' => $race
+        ]);
     }
 
     /**
@@ -58,7 +52,7 @@ class RaceController extends Controller
     {
         $race = Race::findOrFail($id);
 
-        return view('races.show', compact('race'));
+        return response()->json(['data' => $race]);
     }
 
     /**
@@ -66,9 +60,6 @@ class RaceController extends Controller
      */
     public function edit(string $id)
     {
-        $race = Race::findOrFail($id);
-
-        return view('races.edit', compact('race'));
     }
 
     /**
@@ -83,7 +74,10 @@ class RaceController extends Controller
         $race = Race::find($id);
         $race->name = $request->name;
 
-        return redirect()->route('races.index')->with('success', 'La race a été mis à jour avec succès !');
+        return response()->json([
+            'status' => 'Le pouvoir a été mis à jour avec succès !',
+            'data' => $race,
+        ]);
     }
 
     /**
@@ -92,7 +86,9 @@ class RaceController extends Controller
     public function destroy(string $id)
     {
         $race = Race::findOrFail($id);
+
         $race->delete();
-        return redirect('/races')->with('success', 'Race supprimé avec succès');
+
+        return response()->json(['status' => 'success, Race supprimé avec succès']);
     }
 }
