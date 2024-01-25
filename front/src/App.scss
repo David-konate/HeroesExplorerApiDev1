@@ -1,0 +1,14 @@
+:root {
+  --primary-color: #111827;
+  --secondary-color: #472b3b;
+  --box-shadow-primary-color: 0 20px 50px #111827;
+  --box-shadow-secondary-color: 0 20px 50px #472b3b;
+}
+
+body {
+  font-family: "Arial, sans-serif";
+  margin: 0;
+  padding: 0;
+  background-color: var(--primary-color);
+  /* Autres styles globaux */
+}
